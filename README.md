@@ -58,9 +58,11 @@ A vehicle initially stops in an unknown environment. It detects two obstacles ba
 
 where (𝑥, 𝑦, 𝜃) is the robot states, and (𝑥_1 , 𝑦_1) and (𝑥_2 , 𝑦_2) are locations of the two objects.
 
-The vehicle moves in a straight line with a constant speed 𝑣_𝑡 = 1 𝑚𝑚/𝑠𝑠, (𝜔_𝑡 = 0). As the vehicle moves, the lidar detects the relative distances and relative angles of the two objects: (𝑟𝑟 1 , 𝜙𝜙 1 )
+The vehicle moves in a straight line with a constant speed 𝑣_𝑡 = 1 𝑚/𝑠, (𝜔_𝑡 = 0). As the vehicle moves, the lidar detects the relative distances and relative angles of the two objects: (𝑟𝑟 1 , 𝜙𝜙 1 )
 and (𝑟^2, 𝜙^2) in units of meter and radian, which are saved in file “s1.mat” and “s2.mat”. The sampling time is Δ𝑡 = 1 𝑠.
 The noises in the motion and sensing are both Gaussian 𝑁(0, 𝑅) and 𝑁(0, 𝑄), where
+
+![R and Q matrices](images/rq_matrices.png)
 
 Implemented EKF SLAM in Matlab to find out the locations of the vehicle and the two objects, i.e., updated 𝜇 based on the data in “s1.mat” and “s2.mat”.
 It is a simple straight-line motion, so steering is ignored in the motion model.
