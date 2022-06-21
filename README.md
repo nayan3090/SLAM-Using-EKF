@@ -1,5 +1,7 @@
 # Simultaneous Localization and Mapping (SLAM) using Extended Kalman Filter
 
+![EKF SLAM](images/EKF_SLAM_01.png)
+
 ## The Problem of SLAM
 Simultaneous Localization and Mapping (SLAM) is a computational problem of constructing and updating a map of unknown environment while simultaneously keeping a track of robot’s location within it. The robot is able to estimate its location and positions of landmarks in an unknown environment given the robot controls and observations of the nearby features or landmarks over discrete timesteps.
 
