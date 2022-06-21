@@ -1,0 +1,352 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>EKF_SLAM</title><meta name="generator" content="MATLAB 9.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2019-04-01"><meta name="DC.source" content="EKF_SLAM.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#2">Given parameters</a></li><li><a href="#3">Initialization condition of EKF SLAM</a></li><li><a href="#4">EKF SLAM</a></li><li><a href="#5">Plot locations of robot and the two objects</a></li></ul></div><pre class="codeinput">clear
+clc
+
+<span class="comment">% Load given sensor measurements for location of objects in plane of motion</span>
+<span class="comment">% of vehicle</span>
+load <span class="string">'s1.mat'</span>
+load <span class="string">'s2.mat'</span>
+</pre><h2 id="2">Given parameters</h2><pre class="codeinput">v=1; <span class="comment">% Velocity of vehicle</span>
+w=0; <span class="comment">% Radial veocity of vehicle</span>
+dt=1; <span class="comment">% Sampling time</span>
+</pre><h2 id="3">Initialization condition of EKF SLAM</h2><pre class="codeinput">u=[0;0;0;147;102;98;53]; <span class="comment">% Initial mean state estimate vector for system</span>
+E=[0,0,0,0,0,0,0;
+   0,0,0,0,0,0,0;
+   0,0,0,0,0,0,0;
+   0,0,0,10,0,0,0;
+   0,0,0,0,10,0,0;
+   0,0,0,0,0,10,0;
+   0,0,0,0,0,0,10]; <span class="comment">% Initial error covariance matrix</span>
+
+uo=[0;0;0;147;102;98;53]; <span class="comment">% Initial mean state vector for system</span>
+Eo=[0,0,0,0,0,0,0;
+   0,0,0,0,0,0,0;
+   0,0,0,0,0,0,0;
+   0,0,0,100,0,0,0;
+   0,0,0,0,100,0,0;
+   0,0,0,0,0,100,0;
+   0,0,0,0,0,0,100]; <span class="comment">% Initial error covariance matrix</span>
+</pre><h2 id="4">EKF SLAM</h2><pre class="codeinput">I=eye(7); <span class="comment">% Identity matrix</span>
+R=[0.1,0,0,0,0,0,0;
+    0,0.1,0,0,0,0,0;
+    0,0,0.1,0,0,0,0;
+    0,0,0,0,0,0,0;
+    0,0,0,0,0,0,0;
+    0,0,0,0,0,0,0;
+    0,0,0,0,0,0,0]; <span class="comment">% Motion noise covariance matrix</span>
+Q=[0.1,0;
+   0,0.01]; <span class="comment">% Sensing noise covariance matrix</span>
+V=[v;
+   0;
+   0]; <span class="comment">% Velocity vector</span>
+J=[0,0,0;
+   0,0,0;
+   0,0,0]; <span class="comment">% Jacobian matrix for locally linearizing the system</span>
+Fx=[1,0,0,0,0,0,0;
+    0,1,0,0,0,0,0;
+    0,0,1,0,0,0,0]; <span class="comment">% Fx is a matrix to map any variable vector or matrix to higher dimensional space matrix</span>
+Fx1=[1,0,0,0,0,0,0;
+     0,1,0,0,0,0,0;
+     0,0,1,0,0,0,0;
+     0,0,0,1,0,0,0;
+     0,0,0,0,1,0,0]; <span class="comment">% Fx1 is a matrix to map any variable vector or matrix to higher dimensional space matrix</span>
+Fx2=[1,0,0,0,0,0,0;
+      0,1,0,0,0,0,0;
+      0,0,1,0,0,0,0;
+      0,0,0,0,0,1,0;
+      0,0,0,0,0,0,1]; <span class="comment">% Fx2 is a matrix to map any variable vector or matrix to higher dimensional space matrix</span>
+
+X1=zeros(100,1);
+Y1=zeros(100,1);
+M1=zeros(100,1);
+N1=zeros(100,1);
+M2=zeros(100,1);
+N2=zeros(100,1);
+
+<span class="keyword">for</span> i = 1:100
+<span class="comment">% Prediction Step</span>
+u1=u+Fx'*V; <span class="comment">% mean state estimate of the system for current timestep based on mean state vector of previous timestep</span>
+G=I+Fx'*J*Fx; <span class="comment">% Jacobian matrix to locally linearize the non-linear function</span>
+E1=G*E*G'+R; <span class="comment">% Error covariance prediction for current timestep based on error covariance of previous timestep</span>
+
+delx1=u1(4,1)-u1(1,1); <span class="comment">% Prediction of the distance of object 1 in x-direction</span>
+dely1=u1(5,1)-u1(2,1); <span class="comment">% Prediction of the distance of object 1 in y-direction</span>
+del1=[delx1;
+      dely1]; <span class="comment">% Prediction matrix for distance of object 1</span>
+q1=del1'*del1;
+z_hat1=[sqrt(q1);
+       atan((dely1/delx1))]; <span class="comment">% Prediction matrix for location of object 1</span>
+h1=(1/q1)*[-sqrt(q1)*delx1, -sqrt(q1)*dely1, 0, sqrt(q1)*delx1, sqrt(q1)*dely1;
+         dely1, -delx1, 0, -dely1, delx1]; <span class="comment">% Jacobian matrix of predicted location matrix</span>
+z1=[s1(i,1);
+    s1(i,2)]; <span class="comment">% Sensor measurements for object 1</span>
+H1=h1*Fx1; <span class="comment">% Mapping Jacobian matrix to high dimensional space matrix</span>
+
+<span class="comment">% Correction Step</span>
+K1=E1*H1'*((H1*E1*H1'+Q)^(-1)); <span class="comment">% Kalman gain</span>
+u=u1+K1*(z1-z_hat1); <span class="comment">% Update mean state vector of the system</span>
+E=(I-K1*H1)*E1; <span class="comment">% Update error covariance matrix of the system</span>
+
+<span class="comment">% Store values of the mean state vector</span>
+X1(i,1)=u(1,1);
+Y1(i,1)=u(2,1);
+M1(i,1)=u(4,1);
+N1(i,1)=u(5,1);
+<span class="keyword">end</span>
+
+<span class="keyword">for</span> i = 1:100
+<span class="comment">% Prediction Step</span>
+u2=uo+Fx'*V; <span class="comment">% mean state estimate of the system for current timestep based on mean state vector of previous timestep</span>
+G=I+Fx'*J*Fx; <span class="comment">% Jacobian matrix to locally linearize the non-linear function</span>
+E2=G*Eo*G'+R; <span class="comment">% Error covariance prediction for current timestep based on error covariance of previous timestep</span>
+
+delx2=u2(6,1)-u2(1,1); <span class="comment">% Prediction of the distance of object 2 in x-direction</span>
+dely2=u2(7,1)-u2(2,1); <span class="comment">% Prediction of the distance of object 2 in y-direction</span>
+del2=[delx2;
+      dely2]; <span class="comment">% Prediction matrix for distance of object 2</span>
+q2=del2'*del2;
+z_hat2=[sqrt(q2);
+       atan((dely2/delx2))]; <span class="comment">% Prediction matrix for location of object 2</span>
+h2=(1/q2)*[-sqrt(q2)*delx2, -sqrt(q2)*dely2, 0, sqrt(q2)*delx2, sqrt(q2)*dely2;
+         dely2, -delx2, 0, -dely2, delx2]; <span class="comment">% Jacobian matrix of predicted location matrix</span>
+z2=[s2(i,1);
+    s2(i,2)]; <span class="comment">% Sensor measurements for object 2</span>
+H2=h2*Fx2; <span class="comment">% Mapping Jacobian matrix to high dimensional space matrix</span>
+
+<span class="comment">% Correction Step</span>
+K2=E2*H2'*((H2*E2*H2'+Q)^(-1)); <span class="comment">% Kalman gain</span>
+uo=u2+K2*(z2-z_hat2); <span class="comment">% Update mean state vector of the system</span>
+Eo=(I-K2*H2)*E2; <span class="comment">% Update error covariance matrix of the system</span>
+
+<span class="comment">% Store values of the mean state vector</span>
+M2(i,1)=uo(6,1);
+N2(i,1)=uo(7,1);
+<span class="keyword">end</span>
+</pre><h2 id="5">Plot locations of robot and the two objects</h2><pre class="codeinput">figure(1)
+plot(X1,Y1,<span class="string">'o'</span>)
+grid <span class="string">on</span>
+hold <span class="string">on</span>
+plot(M1,N1,<span class="string">'o'</span>)
+plot(M2,N2,<span class="string">'o'</span>)
+hold <span class="string">off</span>
+xlabel(<span class="string">'X (meters)'</span>)
+ylabel(<span class="string">'Y (meters)'</span>)
+title(<span class="string">'2D plane of vehicle motion'</span>)
+legend(<span class="string">'Position of Vehicle'</span>,<span class="string">'Position of object 1'</span>,<span class="string">'Position of Object 2'</span>)
+</pre><img vspace="5" hspace="5" src="EKF_SLAM_01.png" alt=""> <p class="footer"><br><a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2018a</a><br></p></div><!--
+##### SOURCE BEGIN #####
+clear 
+clc
+
+% Load given sensor measurements for location of objects in plane of motion
+% of vehicle
+load 's1.mat'
+load 's2.mat'
+
+%% Given parameters
+
+v=1; % Velocity of vehicle
+w=0; % Radial veocity of vehicle
+dt=1; % Sampling time
+
+%% Initialization condition of EKF SLAM
+
+u=[0;0;0;147;102;98;53]; % Initial mean state estimate vector for system
+E=[0,0,0,0,0,0,0; 
+   0,0,0,0,0,0,0;
+   0,0,0,0,0,0,0;
+   0,0,0,10,0,0,0;
+   0,0,0,0,10,0,0;
+   0,0,0,0,0,10,0;
+   0,0,0,0,0,0,10]; % Initial error covariance matrix
+
+uo=[0;0;0;147;102;98;53]; % Initial mean state vector for system
+Eo=[0,0,0,0,0,0,0;
+   0,0,0,0,0,0,0;
+   0,0,0,0,0,0,0;
+   0,0,0,100,0,0,0;
+   0,0,0,0,100,0,0;
+   0,0,0,0,0,100,0;
+   0,0,0,0,0,0,100]; % Initial error covariance matrix
+
+%% EKF SLAM
+
+I=eye(7); % Identity matrix
+R=[0.1,0,0,0,0,0,0;
+    0,0.1,0,0,0,0,0;
+    0,0,0.1,0,0,0,0;
+    0,0,0,0,0,0,0;
+    0,0,0,0,0,0,0;
+    0,0,0,0,0,0,0;
+    0,0,0,0,0,0,0]; % Motion noise covariance matrix
+Q=[0.1,0;
+   0,0.01]; % Sensing noise covariance matrix
+V=[v;
+   0;
+   0]; % Velocity vector
+J=[0,0,0;
+   0,0,0;
+   0,0,0]; % Jacobian matrix for locally linearizing the system
+Fx=[1,0,0,0,0,0,0;
+    0,1,0,0,0,0,0;
+    0,0,1,0,0,0,0]; % Fx is a matrix to map any variable vector or matrix to higher dimensional space matrix
+Fx1=[1,0,0,0,0,0,0;
+     0,1,0,0,0,0,0;
+     0,0,1,0,0,0,0;
+     0,0,0,1,0,0,0;
+     0,0,0,0,1,0,0]; % Fx1 is a matrix to map any variable vector or matrix to higher dimensional space matrix
+Fx2=[1,0,0,0,0,0,0;
+      0,1,0,0,0,0,0;
+      0,0,1,0,0,0,0;
+      0,0,0,0,0,1,0;
+      0,0,0,0,0,0,1]; % Fx2 is a matrix to map any variable vector or matrix to higher dimensional space matrix
+
+X1=zeros(100,1);
+Y1=zeros(100,1);
+M1=zeros(100,1);
+N1=zeros(100,1);
+M2=zeros(100,1);
+N2=zeros(100,1);
+
+for i = 1:100
+% Prediction Step
+u1=u+Fx'*V; % mean state estimate of the system for current timestep based on mean state vector of previous timestep
+G=I+Fx'*J*Fx; % Jacobian matrix to locally linearize the non-linear function
+E1=G*E*G'+R; % Error covariance prediction for current timestep based on error covariance of previous timestep
+
+delx1=u1(4,1)-u1(1,1); % Prediction of the distance of object 1 in x-direction
+dely1=u1(5,1)-u1(2,1); % Prediction of the distance of object 1 in y-direction
+del1=[delx1;
+      dely1]; % Prediction matrix for distance of object 1
+q1=del1'*del1;
+z_hat1=[sqrt(q1);
+       atan((dely1/delx1))]; % Prediction matrix for location of object 1
+h1=(1/q1)*[-sqrt(q1)*delx1, -sqrt(q1)*dely1, 0, sqrt(q1)*delx1, sqrt(q1)*dely1;
+         dely1, -delx1, 0, -dely1, delx1]; % Jacobian matrix of predicted location matrix
+z1=[s1(i,1);
+    s1(i,2)]; % Sensor measurements for object 1
+H1=h1*Fx1; % Mapping Jacobian matrix to high dimensional space matrix
+
+% Correction Step
+K1=E1*H1'*((H1*E1*H1'+Q)^(-1)); % Kalman gain
+u=u1+K1*(z1-z_hat1); % Update mean state vector of the system
+E=(I-K1*H1)*E1; % Update error covariance matrix of the system
+
+% Store values of the mean state vector
+X1(i,1)=u(1,1); 
+Y1(i,1)=u(2,1);
+M1(i,1)=u(4,1);
+N1(i,1)=u(5,1);
+end
+
+for i = 1:100
+% Prediction Step
+u2=uo+Fx'*V; % mean state estimate of the system for current timestep based on mean state vector of previous timestep
+G=I+Fx'*J*Fx; % Jacobian matrix to locally linearize the non-linear function
+E2=G*Eo*G'+R; % Error covariance prediction for current timestep based on error covariance of previous timestep
+
+delx2=u2(6,1)-u2(1,1); % Prediction of the distance of object 2 in x-direction
+dely2=u2(7,1)-u2(2,1); % Prediction of the distance of object 2 in y-direction
+del2=[delx2;
+      dely2]; % Prediction matrix for distance of object 2
+q2=del2'*del2;
+z_hat2=[sqrt(q2);
+       atan((dely2/delx2))]; % Prediction matrix for location of object 2
+h2=(1/q2)*[-sqrt(q2)*delx2, -sqrt(q2)*dely2, 0, sqrt(q2)*delx2, sqrt(q2)*dely2;
+         dely2, -delx2, 0, -dely2, delx2]; % Jacobian matrix of predicted location matrix
+z2=[s2(i,1);
+    s2(i,2)]; % Sensor measurements for object 2
+H2=h2*Fx2; % Mapping Jacobian matrix to high dimensional space matrix
+
+% Correction Step
+K2=E2*H2'*((H2*E2*H2'+Q)^(-1)); % Kalman gain
+uo=u2+K2*(z2-z_hat2); % Update mean state vector of the system
+Eo=(I-K2*H2)*E2; % Update error covariance matrix of the system
+
+% Store values of the mean state vector
+M2(i,1)=uo(6,1);
+N2(i,1)=uo(7,1);
+end
+
+%% Plot locations of robot and the two objects
+
+figure(1)
+plot(X1,Y1,'o')
+grid on
+hold on
+plot(M1,N1,'o')
+plot(M2,N2,'o')
+hold off
+xlabel('X (meters)')
+ylabel('Y (meters)')
+title('2D plane of vehicle motion')
+legend('Position of Vehicle','Position of object 1','Position of Object 2')
+##### SOURCE END #####
+--></body></html>
